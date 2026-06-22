@@ -3,6 +3,7 @@ from io import StringIO
 from logging import Logger
 from time import sleep
 
+import openai
 from openai import OpenAI, omit
 from openai.types.chat import ChatCompletionMessageParam
 
@@ -78,10 +79,14 @@ class LLMExecutor:
                     last_error = err
                     if not is_retry_error(err):
                         raise err
+                    is_rate_limit = isinstance(err, openai.RateLimitError)
                     if logger is not None:
-                        logger.warning(f"request failed with connection error, retrying... ({i + 1} times)")
+                        logger.warning(
+                            f"request failed{' (rate limited)' if is_rate_limit else ''}, retrying... ({i + 1} times)"
+                        )
                     if self._retry_interval_seconds > 0.0 and i < self._retry_times:
-                        sleep(self._retry_interval_seconds)
+                        wait = self._retry_interval_seconds * (2**i if is_rate_limit else 1)
+                        sleep(wait)
                     continue
 
                 did_success = True
@@ -157,19 +162,34 @@ class LLMExecutor:
                     }
                 )
 
-        stream = self._client.chat.completions.create(
-            model=self._model_name,
-            messages=messages,
-            stream=True,
-            stream_options={"include_usage": True},
-            top_p=top_p if top_p is not None else omit,
-            temperature=temperature if temperature is not None else omit,
-            max_tokens=max_tokens if max_tokens is not None else omit,
-            extra_body=self._extra_body,
-        )
+        stream_options: dict | None = {"include_usage": True}
+        try:
+            stream = self._client.chat.completions.create(
+                model=self._model_name,
+                messages=messages,
+                stream=True,
+                stream_options=stream_options,
+                top_p=top_p if top_p is not None else omit,
+                temperature=temperature if temperature is not None else omit,
+                max_tokens=max_tokens if max_tokens is not None else omit,
+                extra_body=self._extra_body,
+            )
+        except openai.APIError as e:
+            if "stream_options" in str(e):
+                stream = self._client.chat.completions.create(
+                    model=self._model_name,
+                    messages=messages,
+                    stream=True,
+                    top_p=top_p if top_p is not None else omit,
+                    temperature=temperature if temperature is not None else omit,
+                    max_tokens=max_tokens if max_tokens is not None else omit,
+                    extra_body=self._extra_body,
+                )
+            else:
+                raise
         buffer = StringIO()
         for chunk in stream:
-            if chunk.choices and chunk.choices[0].delta.content:
+            if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
                 buffer.write(chunk.choices[0].delta.content)
             self._statistics.submit_usage(chunk.usage)
         return buffer.getvalue()

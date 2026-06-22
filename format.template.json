@@ -2,7 +2,7 @@
   "key": "<YOUR_API_KEY>",
   "url": "https://sample-llm.com/v1",
   "model": "sample-llm-model",
-  "token_encoding": "sample-token-encoding",
+  "token_encoding": "o200k_base",
   "timeout": 360.0,
   "retry_times": 10,
   "retry_interval_seconds": 0.75,
@@ -13,5 +13,35 @@
   "fill": {
     "temperature": [0.2, 0.9],
     "top_p": [0.9, 1.0]
+  },
+  "study": {
+    "temperature": 0.3,
+    "top_p": 0.9,
+    "extra_body": null
+  },
+  "_study_configs": {
+    "_google_aistudio_gemma": {
+      "description": "Google AI Studio (get key at aistudio.google.com/apikey) with Gemma 4 31b",
+      "key": "AIzaSy_...your_key",
+      "url": "https://generativelanguage.googleapis.com/v1beta/openai/",
+      "model": "gemini-3.1-flash-lite",
+      "token_encoding": "o200k_base",
+      "retry_times": 20,
+      "retry_interval_seconds": 2.0
+    },
+    "_groq_gemma": {
+      "description": "Groq free tier with Gemma 4 31b",
+      "key": "gsk_YOUR_GROQ_API_KEY",
+      "url": "https://api.groq.com/openai/v1",
+      "model": "gemma4-31b-it",
+      "token_encoding": "o200k_base"
+    },
+    "_openrouter_gemma": {
+      "description": "OpenRouter with free Gemma",
+      "key": "sk-or-YOUR_OPENROUTER_KEY",
+      "url": "https://openrouter.ai/api/v1",
+      "model": "google/gemma-4-31b-it:free",
+      "token_encoding": "o200k_base"
+    }
   }
 }

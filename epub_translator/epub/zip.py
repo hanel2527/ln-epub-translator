@@ -67,3 +67,9 @@ class Zip:
     def replace(self, path: Path) -> IO[bytes]:
         self._processed_files.add(path)
         return self._target_zip.open(path.as_posix(), "w")
+
+    def writestr(self, path: Path, data: bytes | str) -> None:
+        self._processed_files.add(path)
+        if isinstance(data, str):
+            data = data.encode("utf-8")
+        self._target_zip.writestr(path.as_posix(), data)

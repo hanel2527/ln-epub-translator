@@ -1,13 +1,12 @@
 # ln-epub-translator: Epub Translator for Light Novels
 Forked from [epub-traslator](https://github.com/oomol-lab/epub-translator)
 
+<div align="center">English | <a href="docs/KO_README.md">한국어</a></div>
+
 Translate light novels for studying kanji and elemental Japanese expressions. You can also obtain a clean translation version. Resulting epubs preserve all formatting, images, and structure.
 
 ![image-both](./docs/images/example-both.png)
 ![image-clean](./docs/images/example-clean.png)
-
-## Documents for Other Languages
-- [한국어](./docs/KO_README.md)
 
 ## Quickstart
 

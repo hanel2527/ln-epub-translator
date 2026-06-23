@@ -1,16 +1,28 @@
-# Epub Translator for Light Novels
-Translate light novels for studying kanji and elemental Japanese expressions. You can also obtain a clean translation version.
+# ln-epub-translator: Epub Translator for Light Novels
+Forked from [epub-traslator](https://github.com/oomol-lab/epub-translator)
+
+Translate light novels for studying kanji and elemental Japanese expressions. You can also obtain a clean translation version. Resulting epubs preserve all formatting, images, and structure.
+
+![image-both](./docs/images/example-both.png)
+![image-clean](./docs/images/example-clean.png)
+
+## Documents for Other Languages
+- [한국어](./docs/KO_README.md)
+
 ## Quickstart
+
 ### Environment (Install [uv](https://docs.astral.sh/uv/getting-started/installation/))
 ```sh
-# Windows
+# Windows - open cmd and execute following command
 winget install --id=astral-sh.uv -e
 # Linux, MacOS
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 ### Config file
 1. Copy `format.template.json` to `format.json`.
-2. Fill the "key", "url" and "model" with actual values. Recommended values are:
+2. Replace the "key", "url" and "model" with actual values. You can use any openai-compatiable APIs.
+
+Recommended values are:
 ```json
 {
   "key": "your-actual-api-key-from-ai-studio",
@@ -35,7 +47,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
   }
 }
 ```
-### Dictionary
+### Dictionary (Optional)
 You can give instructions to LLM.
 ```md
 ## Characters
@@ -54,7 +66,27 @@ You can check example in [here](./example.dict.md)
 ### Run translator
 ```sh
 uv run scripts/translate_for_study.py path/to/book.epub --dict path/to/dict.md -l Korean
-# Resume after Ctrl-C:
+# Translation progress is saved in "out" directory. You can check progress in out/<book_name>/_progress.html
+# Resume from stopped location
 uv run scripts/translate_for_study.py path/to/book.epub --dict path/to/dict.md -l Korean --resume
 ```
 Output will be in `out` directory.
+
+### Expected Output
+```sh
+out
+├── <your_book_name>
+│   ├── logs
+│   │   ├── request 2026-06-21 02-39-23.log
+│   │   ├── request 2026-06-21 02-39-26.log
+...
+│   │   ├── request 2026-06-21 02-48-28.log
+│   │   └── request 2026-06-21 02-48-42.log
+│   ├── _progress.html
+│   ├── _state.json
+│   ├── translated_study.epub
+│   └── translated_study.clean.epub
+```
+- _progress.hmtl: For checking translation progress
+- translated_study.epub: epub file with original text + translated text
+- translated_study.clean.epub: epub file with only translated text

@@ -282,7 +282,7 @@ def main() -> None:
 
             _print_usage_stats(llm)
 
-        clean_path = output_path.with_suffix(".translated.epub")
+        clean_path = output_path.with_suffix(".clean.epub")
         with Zip(source_path=source_path.resolve(), target_path=clean_path.resolve()) as clean_zip:
             output_gen.write_clean_to_zip(
                 chapter_translations=chapter_translations,

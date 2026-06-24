@@ -5,8 +5,8 @@ import shutil
 import sys
 import tempfile
 import threading
-from pathlib import Path
 import webbrowser
+from pathlib import Path
 
 sys.path.append(os.path.abspath(os.path.join(__file__, "..", "..")))
 
@@ -171,8 +171,19 @@ def main():
             outputs=[status, study_out, clean_out],
         )
     print(f"Running webui at http://localhost:{args.port}")
-    webbrowser.open(f"http://localhost:{args.port}")
+    try:
+        webbrowser.open(f"http://localhost:{args.port}")
+    except Exception:
+        pass  # browser opening is optional
     demo.launch(server_name=args.host, server_port=args.port, theme=theme, quiet=True)
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"\nFATAL: {e}", file=sys.stderr)
+        print("\nPress Enter to exit...", file=sys.stderr)
+        input()
+        sys.exit(1)

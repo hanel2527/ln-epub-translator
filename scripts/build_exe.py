@@ -10,8 +10,8 @@ Output: dist/epub-translator-webui/epub-translator-webui.exe
 """
 
 import os
-import sys
 import shutil
+import sys
 from pathlib import Path
 
 
@@ -58,10 +58,10 @@ def main():
         # ── Data files: Jinja templates ──────────────────────────
         *[a for f in (root / "epub_translator" / "data").glob("*.jinja")
           for a in ("--add-data", f"{f}{sep}epub_translator/data")],
-        # ── Collect data from packages with bundled resources ────
-        "--collect-data", "unidic_lite",
-        "--collect-data", "gradio",
-        "--collect-data", "jinja2",
+        # ── Collect all assets from key packages ─────────────────
+        "--collect-all", "gradio",
+        "--collect-all", "unidic_lite",
+        "--collect-all", "fugashi",
         # ── Hidden imports ───────────────────────────────────────
         *[a for mod in (
             "tiktoken", "openai", "jinja2", "gradio",

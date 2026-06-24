@@ -4,11 +4,14 @@ Forked from [epub-traslator](https://github.com/oomol-lab/epub-translator)
 <div align="center">English | <a href="docs/KO_README.md">한국어</a></div>
 
 Translate light novels for studying kanji and elemental Japanese expressions. You can also obtain a clean translation version. Resulting epubs preserve all formatting, images, and structure.
+Supports webui for easy usage.
+
+![image-webui](./docs/images/webui.png)
 
 ![image-both](./docs/images/example-both.png)
 ![image-clean](./docs/images/example-clean.png)
 
-## Quickstart
+## Quickstart (webui)
 
 ### Environment (Install [uv](https://docs.astral.sh/uv/getting-started/installation/))
 ```sh
@@ -17,6 +20,25 @@ winget install --id=astral-sh.uv -e
 # Linux, MacOS
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
+### Run webui (recommended)
+```sh
+uv run scripts/run_webui.py
+```
+Now, you can access webui at `http://localhost:2527`
+
+Recommended settings:
+- API Key: "your-actual-api-key-from-ai-studio"
+- API URL: "https://generativelanguage.googleapis.com/v1beta/openai/"
+- MODEL: "gemini-3.1-flash-lite"
+
+Then, click `Save Config` button.
+Upload your epub file and click `Start Translation` button.
+
+## CLI (for advanced user)
+```sh
+uv run scripts/translate_for_study.py --dict path/to/dict.md path/to/book.epub -l Korean
+```
+
 ### Config file
 1. Copy `format.template.json` to `format.json`.
 2. Replace the "key", "url" and "model" with actual values. You can use any openai-compatiable APIs.

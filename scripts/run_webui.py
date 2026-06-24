@@ -6,6 +6,7 @@ import sys
 import tempfile
 import threading
 from pathlib import Path
+import webbrowser
 
 sys.path.append(os.path.abspath(os.path.join(__file__, "..", "..")))
 
@@ -170,8 +171,8 @@ def main():
             outputs=[status, study_out, clean_out],
         )
     print(f"Running webui at http://localhost:{args.port}")
+    webbrowser.open(f"http://localhost:{args.port}")
     demo.launch(server_name=args.host, server_port=args.port, theme=theme, quiet=True)
-
 
 if __name__ == "__main__":
     main()

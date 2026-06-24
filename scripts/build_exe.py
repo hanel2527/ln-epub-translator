@@ -62,6 +62,8 @@ def main():
         "--collect-all", "gradio",
         "--collect-all", "unidic_lite",
         "--collect-all", "fugashi",
+        "--collect-all", "safehttpx",
+        "--collect-all", "groovy",
         # ── Hidden imports ───────────────────────────────────────
         *[a for mod in (
             "tiktoken", "openai", "jinja2", "gradio",

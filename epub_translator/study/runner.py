@@ -56,6 +56,16 @@ def _save_progress(progress_path: Path, full_html: str) -> None:
     progress_path.write_text(full_html, encoding="utf-8")
 
 
+_AUTO_TITLE_PATTERN = re.compile(
+    r"^(?:chapter|chaper|ch|section|sec|part|pt)\s*[0-9]+$",
+    re.IGNORECASE,
+)
+
+
+def _is_generated_title(title: str) -> bool:
+    return bool(_AUTO_TITLE_PATTERN.match(title.strip()))
+
+
 def _find_chapter_title(toc_list, chapter_index: int) -> str | None:
     if 0 <= chapter_index < len(toc_list):
         toc = toc_list[chapter_index]
@@ -95,12 +105,14 @@ def run_translation(
     output_path = book_dir / "translated_study.epub"
     state_data = _load_state(book_dir) if resume else None
 
+    cache_dir = output_dir.parent / "cache"
+
     if config is not None:
         cfg = dict(config)
         study_cfg = cfg.pop("study", {})
-        llm = LLM(**cfg, **study_cfg, log_dir_path=book_dir / "logs")
+        llm = LLM(**cfg, **study_cfg, log_dir_path=book_dir / "logs", cache_path=cache_dir)
     else:
-        llm = _load_llm_from_config(log_dir_path=book_dir / "logs")
+        llm = _load_llm_from_config(log_dir_path=book_dir / "logs", cache_path=cache_dir)
 
     dictionary_prompt = ""
     if dict_path:
@@ -160,6 +172,7 @@ def run_translation(
                 raise InterruptedError("Translation cancelled by user")
 
             chapter_title = _find_chapter_title(toc_list, chapter_index) or f"Chapter {chapter_index + 1}"
+            display_title = "" if _is_generated_title(chapter_title) else chapter_title
 
             if chapter_index in completed_indices:
                 if on_progress:
@@ -212,13 +225,13 @@ def run_translation(
 
             chapter_html = output_gen.generate_chapter_html(
                 chapter_index=chapter_index,
-                chapter_title=chapter_title,
+                chapter_title=display_title,
                 paragraphs=paragraphs,
             )
 
             chapter_translated = "".join(r.translated_html for r in results)
-            chapter_translations[chapter_index] = (chapter_title, chapter_translated)
-            chapter_results[chapter_index] = (chapter_title, [chapter_html])
+            chapter_translations[chapter_index] = (display_title, chapter_translated)
+            chapter_results[chapter_index] = (display_title, [chapter_html])
             completed_indices.add(chapter_index)
 
             full_html = output_gen.generate_full_html(

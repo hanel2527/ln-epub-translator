@@ -51,7 +51,8 @@ class StudyOutputGenerator:
         paragraphs: list[tuple[str, str]],
     ) -> str:
         lines: list[str] = []
-        lines.append(f"<h1>{chapter_title}</h1>")
+        if chapter_title:
+            lines.append(f"<h1>{chapter_title}</h1>")
         lines.append('<div class="chapter-body">')
 
         for source_html, translated_html in paragraphs:
@@ -257,7 +258,7 @@ hr {
                 continue
             ch_title, html_parts = item
             ch_path = Path(chapter_paths[ch_idx])
-            escaped_title = html.escape(ch_title, quote=True)
+            escaped_title = html.escape(ch_title, quote=True) if ch_title else book_title or f"Chapter {ch_idx + 1}"
             body = _AMP_PATTERN.sub("&amp;", "\n".join(html_parts))
             ch_content = f"""<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html>
@@ -307,7 +308,8 @@ h1 {
                 continue
             ch_title, trans_html = item
             ch_path = Path(chapter_paths[ch_idx])
-            escaped_title = html.escape(ch_title, quote=True)
+            escaped_title = html.escape(ch_title, quote=True) if ch_title else ""
+            heading = f"<h1>{escaped_title}</h1>" if ch_title else ""
             trans_body = _AMP_PATTERN.sub("&amp;", trans_html)
             ch_content = f"""<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html>
@@ -318,7 +320,7 @@ h1 {
 <link rel="stylesheet" type="text/css" href="style.css"/>
 </head>
 <body>
-<h1>{escaped_title}</h1>
+{heading}
 {trans_body}
 </body>
 </html>"""

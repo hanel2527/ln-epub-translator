@@ -167,12 +167,13 @@ def run_translation(
                 book_title = field.text
                 break
 
+        content_chapter_num = sum(1 for t in chapter_translations if t is not None)
+
         for chapter_index, (chapter_path, media_type) in enumerate(chapter_paths):
             if abort_event and abort_event.is_set():
                 raise InterruptedError("Translation cancelled by user")
 
             chapter_title = _find_chapter_title(toc_list, chapter_index) or f"Chapter {chapter_index + 1}"
-            display_title = "" if _is_generated_title(chapter_title) else chapter_title
 
             if chapter_index in completed_indices:
                 if on_progress:
@@ -201,6 +202,12 @@ def run_translation(
                 if on_progress:
                     on_progress(chapter_index, total_chapters, chapter_title)
                 continue
+
+            content_chapter_num += 1
+            if _is_generated_title(chapter_title):
+                display_title = f"Chapter {content_chapter_num}"
+            else:
+                display_title = chapter_title
 
             paragraphs: list[tuple[str, str]] = []
 

@@ -9,7 +9,6 @@ Supports webui for easy usage.
 ![image-webui](./docs/images/webui.png)
 
 ![image-both](./docs/images/example-both.png)
-![image-clean](./docs/images/example-clean.png)
 
 ## Quickstart (webui)
 

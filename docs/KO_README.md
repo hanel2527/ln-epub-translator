@@ -1,7 +1,7 @@
 # ln-epub-translator: 라이트 노벨용 EPUB 번역기
+![image-webui](./images/webui.png)
 
-## 빠른 시작
-### 환경 설정 (uv 설치)
+## 환경 설정 (uv 설치)
 1. [uv 설치 가이드](https://docs.astral.sh/uv/getting-started/installation/)를 참고하여 `uv`를 설치
 
 ```sh
@@ -11,6 +11,22 @@ winget install --id=astral-sh.uv -e
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
+### webui 실행 (추천)
+```sh
+uv run scripts/run_webui.py
+```
+`http://localhost:2527` 를 브라우저에서 열기
+
+추천 세팅:
+- API Key: "your-actual-api-key-from-ai-studio"
+- API URL: "https://generativelanguage.googleapis.com/v1beta/openai/"
+- MODEL: "gemini-3.1-flash-lite"
+
+`Save Config` 버튼을 클릭해서 설정 저장.
+epub파일 업로드한 다음 `Start Translation` 버튼을 눌러서 번역 시작.
+
+
+## CLI (고급 사용자용)
 ### 설정 파일
 
 1. `format.template.json` 파일을 `format.json`으로 복사

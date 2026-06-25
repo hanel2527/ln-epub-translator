@@ -59,6 +59,8 @@ def main():
         *[a for f in (root / "epub_translator" / "data").glob("*.jinja")
           for a in ("--add-data", f"{f}{sep}epub_translator/data")],
         # ── Collect all assets from key packages ─────────────────
+        "--collect-all", "tiktoken",
+        "--collect-all", "tiktoken_ext",
         "--collect-all", "gradio",
         "--collect-all", "unidic_lite",
         "--collect-all", "fugashi",
@@ -66,7 +68,7 @@ def main():
         "--collect-all", "groovy",
         # ── Hidden imports ───────────────────────────────────────
         *[a for mod in (
-            "tiktoken", "openai", "jinja2", "gradio",
+            "openai", "jinja2", "gradio",
             "fugashi", "unidic_lite",
             "bs4", "mathml2latex", "resource_segmentation",
             "httpx", "requests",

@@ -87,7 +87,8 @@ def run_translation(
     source_path: Path,
     target_language: str,
     output_dir: Path = Path("out"),
-    batch_size: int = 5000,
+    batch_size: int = 2500,
+    max_paragraphs: int = 30,
     dict_path: Path | None = None,
     resume: bool = False,
     config: dict | None = None,
@@ -132,6 +133,7 @@ def run_translation(
         kanji_tracker=kanji_tracker,
         ruby_annotator=ruby_annotator,
         batch_size=batch_size,
+        max_paragraphs=max_paragraphs,
         dictionary_prompt=dictionary_prompt,
     )
     output_gen = StudyOutputGenerator(

@@ -31,8 +31,14 @@ def main() -> None:
         "-b",
         "--batch-size",
         type=int,
-        default=5000,
-        help="Characters per batch for LLM translation (default: 5000)",
+        default=2500,
+        help="Characters per batch for LLM translation (default: 2500)",
+    )
+    parser.add_argument(
+        "--max-paragraphs",
+        type=int,
+        default=30,
+        help="Maximum paragraphs per LLM batch; lower this if the model returns empty responses (default: 30)",
     )
     parser.add_argument(
         "--resume",
@@ -68,6 +74,7 @@ def main() -> None:
         target_language=args.lan,
         output_dir=Path(args.output),
         batch_size=args.batch_size,
+        max_paragraphs=args.max_paragraphs,
         dict_path=dict_path,
         resume=args.resume,
         on_progress=on_progress,

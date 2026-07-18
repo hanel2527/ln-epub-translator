@@ -7,7 +7,7 @@ import openai
 from openai import OpenAI, omit
 from openai.types.chat import ChatCompletionMessageParam
 
-from .error import is_retry_error
+from .error import EmptyResponseError, is_retry_error
 from .statistics import Statistics
 from .types import Message, MessageRole
 
@@ -192,4 +192,7 @@ class LLMExecutor:
             if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
                 buffer.write(chunk.choices[0].delta.content)
             self._statistics.submit_usage(chunk.usage)
-        return buffer.getvalue()
+        response_text = buffer.getvalue()
+        if not response_text.strip():
+            raise EmptyResponseError("Model returned an empty response")
+        return response_text

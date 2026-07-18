@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from xml.etree.ElementTree import Element
 
 from ..llm import LLM, Message, MessageRole
+from ..llm.error import EmptyResponseError
 from ..segment import InlineSegment, search_inline_segments, search_text_segments
 from .kanji_tracker import KanjiTracker
 from .ruby_annotator import RubyAnnotator
@@ -27,6 +28,7 @@ class StudyTranslator:
         kanji_tracker: KanjiTracker,
         ruby_annotator: RubyAnnotator,
         batch_size: int = 2000,
+        max_paragraphs: int = 120,
         chapter_index: int = 0,
         chapter_title: str = "",
         dictionary_prompt: str = "",
@@ -36,6 +38,7 @@ class StudyTranslator:
         self._kanji_tracker = kanji_tracker
         self._ruby_annotator = ruby_annotator
         self._batch_size = batch_size
+        self._max_paragraphs = max_paragraphs
         self._chapter_index = chapter_index
         self._chapter_title = chapter_title
         self._dictionary_prompt = dictionary_prompt
@@ -55,23 +58,27 @@ class StudyTranslator:
         current_batch: list[InlineSegment] = []
         current_batch_len = 0
 
+        def flush(batch: list[InlineSegment]) -> None:
+            if not batch:
+                return
+            for res in self._translate_batch_with_fallback(batch):
+                results.append(res)
+
         for segment in inline_segments:
             seg_text = self._build_inline_source(segment)
             seg_len = len(seg_text)
-            if current_batch_len + seg_len > self._batch_size and current_batch:
-                result = self._translate_batch(current_batch)
-                if result is not None:
-                    results.append(result)
+            if current_batch and (
+                current_batch_len + seg_len > self._batch_size
+                or len(current_batch) >= self._max_paragraphs
+            ):
+                flush(current_batch)
                 current_batch = [segment]
                 current_batch_len = seg_len
             else:
                 current_batch.append(segment)
                 current_batch_len += seg_len
 
-        if current_batch:
-            result = self._translate_batch(current_batch)
-            if result is not None:
-                results.append(result)
+        flush(current_batch)
 
         return results
 
@@ -83,6 +90,23 @@ class StudyTranslator:
             text = text_segment.text
             source_parts.append(text)
         return "<p>" + "".join(source_parts) + "</p>"
+
+    def _translate_batch_with_fallback(self, batch: list[InlineSegment]) -> list[StudyTranslationResult]:
+        try:
+            result = self._translate_batch(batch)
+        except EmptyResponseError:
+            result = None
+
+        if result is not None:
+            return [result]
+
+        if len(batch) <= 1:
+            return []
+
+        mid = len(batch) // 2
+        first = self._translate_batch_with_fallback(batch[:mid])
+        second = self._translate_batch_with_fallback(batch[mid:])
+        return first + second
 
     def _translate_batch(self, batch: list[InlineSegment]) -> StudyTranslationResult | None:
         combined_source = "\n\n".join(self._build_inline_source(s) for s in batch)
@@ -101,7 +125,7 @@ class StudyTranslator:
                     Message(role=MessageRole.SYSTEM, message=prompt),
                     Message(role=MessageRole.USER, message=user_message_text),
                 ],
-                max_tokens=16384,
+                max_tokens=4096,
                 temperature=0.3,
             )
 

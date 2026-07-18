@@ -3,12 +3,21 @@ import openai
 import requests
 
 
+class EmptyResponseError(Exception):
+    """Raised when the model returns an empty/blank response with no error."""
+
+    def __init__(self, message: str = "Model returned an empty response") -> None:
+        super().__init__(message)
+
+
 def is_retry_error(err: Exception) -> bool:
     if _is_openai_retry_error(err):
         return True
     if _is_httpx_retry_error(err):
         return True
     if _is_request_retry_error(err):
+        return True
+    if isinstance(err, EmptyResponseError):
         return True
     return False
 

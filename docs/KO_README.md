@@ -19,7 +19,7 @@ uv run scripts/run_webui.py
 
 추천 세팅:
 - API Key: "your-actual-api-key-from-ai-studio"
-- API URL: "https://generativelanguage.googleapis.com/v1beta/openai/"
+- API URL: "https://generativelanguage.googleapis.com/v1/beta/openai/"
 - MODEL: "gemini-3.1-flash-lite"
 
 `Save Config` 버튼을 클릭해서 설정 저장.
@@ -51,6 +51,7 @@ epub파일 업로드한 다음 `Start Translation` 버튼을 눌러서 번역 �
     "top_p": [0.9, 1.0]
   },
   "study": {
+    "max_output_tokens": 16384,
     "temperature": 0.3,
     "top_p": 0.9,
     "extra_body": null
@@ -107,8 +108,25 @@ uv run scripts/translate_for_study.py path/to/book.epub --dict path/to/dict.md -
 - 번역 누락이나 불완전한 응답은 배치를 나눠 처리. 한 문단도 끝내 실패하면 완료로 저장하지 않고 오류로 중단.
 - `--resume`은 이미 완료한 챕터의 저장된 출력을 유지. 기존 번역도 새 형식으로 보려면 `-o out-text`처럼 별도 출력 폴더에서 새로 번역.
 
-Gemma에서 설명이 길어지면 `-b 1200 --max-paragraphs 12`부터 시작해 미리보기를 보며 조정하는 것을 권장.
-실측 최적값은 아니며, 현재 요청당 출력 상한은 4096 토큰임.
+요청당 출력 상한 기본값은 **16384 토큰**. `format.json`의 `study.max_output_tokens`로 변경할 수 있으며 Web UI도 같은 설정을 사용.
+CLI에서는 다음 옵션이 설정 파일보다 우선:
+```sh
+uv run scripts/translate_for_study.py book.epub -l Korean --max-output-tokens 16384
+```
+사용하는 API가 지원하는 범위의 양의 정수로 지정. 상한을 늘려도 모델이 반드시 그만큼 길게 답하는 것은 아님.
+출력 상한을 바꾸면 이전 상한으로 생성된 응답 캐시를 재사용하지 않음.
+
+설명이 길어지면 `-b 1200 --max-paragraphs 12`부터 시작해 미리보기를 보며 조정하는 것을 권장.
+큰 배치에서는 형식·내용 오류가 여전히 발생할 수 있음. 번역 문단이 이미 완결된 뒤의 `<study>`를 `</p>`로 잘못 닫는 경우는 허용.
+모델이 작성한 한자 읽기·음훈·어원 설명은 별도 검수가 필요.
+
+Ollama `gemma4:31b` 실측: 작성한 30문단을 두 번 이어 붙인 60문단·5198자 길이 테스트에서,
+4096 상한은 44문단 번역 후 `length`로 잘렸고 16384 상한은 5734 토큰을 사용해 60문단을 모두 번역하고 `stop`으로 종료.
+다만 반복된 후반부의 학습 설명은 생략했으며, 30문단 테스트에서는 한자 음훈·어원 오류도 발견.
+출력 여유를 확보해도 작은 배치와 내용 검수를 대체하지는 못함.
+
+Ollama Cloud의 OpenAI 호환 주소는 `https://ollama.com/v1`이며 `/api/v1`이 아님.
+([공식 문서](https://docs.ollama.com/api/openai-compatibility))
 
 ### 결과물
 ```sh

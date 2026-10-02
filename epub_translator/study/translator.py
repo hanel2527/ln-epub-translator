@@ -10,6 +10,8 @@ from ..segment import InlineSegment, search_inline_segments, search_text_segment
 from .kanji_tracker import KanjiTracker
 from .ruby_annotator import RubyAnnotator
 
+DEFAULT_MAX_OUTPUT_TOKENS = 16384
+
 _SOURCE_PARAGRAPH_PATTERN = re.compile(r"<p>.*?</p>", re.DOTALL)
 
 
@@ -70,9 +72,13 @@ class _StudyResponseParser(HTMLParser):
         if tag == "study":
             self._finish_study()
         elif tag == "p":
+            # Some models close a sibling <study> with </p>. Only the note is
+            # ending in that case; a real open translation still needs closing.
+            closing_study = self._study_parts is not None
             self._finish_study()
             if self._paragraph_parts is None or self._paragraph_notes is None:
-                self.invalid = True
+                if not closing_study:
+                    self.invalid = True
                 return
             translation = "".join(self._paragraph_parts).strip()
             if not translation:
@@ -112,7 +118,11 @@ class StudyTranslator:
         chapter_index: int = 0,
         chapter_title: str = "",
         dictionary_prompt: str = "",
+        max_output_tokens: int = DEFAULT_MAX_OUTPUT_TOKENS,
     ) -> None:
+        if isinstance(max_output_tokens, bool) or not isinstance(max_output_tokens, int) or max_output_tokens <= 0:
+            raise ValueError("max_output_tokens must be a positive integer")
+        self._max_output_tokens = max_output_tokens
         self._llm = llm
         self._target_language = target_language
         self._kanji_tracker = kanji_tracker
@@ -204,7 +214,7 @@ class StudyTranslator:
                     Message(role=MessageRole.SYSTEM, message=prompt),
                     Message(role=MessageRole.USER, message=user_message_text),
                 ],
-                max_tokens=4096,
+                max_tokens=self._max_output_tokens,
                 temperature=0.3,
             )
 

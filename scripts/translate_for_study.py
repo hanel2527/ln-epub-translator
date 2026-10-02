@@ -41,6 +41,12 @@ def main() -> None:
         help="Maximum paragraphs per LLM batch; lower this if the model returns empty responses (default: 30)",
     )
     parser.add_argument(
+        "--max-output-tokens",
+        type=int,
+        default=None,
+        help="Maximum output tokens per request (overrides study.max_output_tokens; default: 16384)",
+    )
+    parser.add_argument(
         "--resume",
         action="store_true",
         help="Resume from previous partial run (reads _state.json in book output dir)",
@@ -75,6 +81,7 @@ def main() -> None:
         output_dir=Path(args.output),
         batch_size=args.batch_size,
         max_paragraphs=args.max_paragraphs,
+        max_output_tokens=args.max_output_tokens,
         dict_path=dict_path,
         resume=args.resume,
         on_progress=on_progress,

@@ -14,6 +14,7 @@ from epub_translator.study import (
     StudyTranslator,
 )
 from epub_translator.study.output import StudyOutputGenerator
+from epub_translator.study.translator import DEFAULT_MAX_OUTPUT_TOKENS
 from epub_translator.utils import read_format_json
 from epub_translator.xml import XMLLikeNode, find_first
 
@@ -76,15 +77,6 @@ def _find_chapter_title(toc_list, chapter_index: int) -> str | None:
     return None
 
 
-def _load_llm_from_config(log_dir_path: Path, **extra_args) -> LLM:
-    config = read_format_json()
-    config.pop("translation", None)
-    config.pop("fill", None)
-    config = {k: v for k, v in config.items() if not k.startswith("_")}
-    study_config = config.pop("study", {})
-    return LLM(**config, **study_config, **extra_args, log_dir_path=log_dir_path)
-
-
 def run_translation(
     source_path: Path,
     target_language: str,
@@ -96,6 +88,7 @@ def run_translation(
     config: dict | None = None,
     on_progress: callable = None,
     abort_event: threading.Event | None = None,
+    max_output_tokens: int | None = None,
 ) -> TranslationResult:
     if not source_path.exists():
         raise FileNotFoundError(f"Source file '{source_path}' does not exist")
@@ -110,12 +103,15 @@ def run_translation(
 
     cache_dir = output_dir.parent / "cache"
 
-    if config is not None:
-        cfg = dict(config)
-        study_cfg = cfg.pop("study", {})
-        llm = LLM(**cfg, **study_cfg, log_dir_path=book_dir / "logs", cache_path=cache_dir)
-    else:
-        llm = _load_llm_from_config(log_dir_path=book_dir / "logs", cache_path=cache_dir)
+    cfg = dict(config) if config is not None else read_format_json()
+    cfg.pop("translation", None)
+    cfg.pop("fill", None)
+    cfg = {k: v for k, v in cfg.items() if not k.startswith("_")}
+    study_cfg = dict(cfg.pop("study", {}))
+    configured_max_output_tokens = study_cfg.pop("max_output_tokens", DEFAULT_MAX_OUTPUT_TOKENS)
+    if max_output_tokens is None:
+        max_output_tokens = configured_max_output_tokens
+    llm = LLM(**cfg, **study_cfg, log_dir_path=book_dir / "logs", cache_path=cache_dir)
 
     dictionary_prompt = ""
     if dict_path and dict_path.exists():
@@ -137,6 +133,7 @@ def run_translation(
         batch_size=batch_size,
         max_paragraphs=max_paragraphs,
         dictionary_prompt=dictionary_prompt,
+        max_output_tokens=max_output_tokens,
     )
     output_gen = StudyOutputGenerator(
         kanji_tracker=kanji_tracker,

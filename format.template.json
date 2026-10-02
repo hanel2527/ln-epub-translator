@@ -15,6 +15,7 @@
     "top_p": [0.9, 1.0]
   },
   "study": {
+    "max_output_tokens": 16384,
     "temperature": 0.3,
     "top_p": 0.9,
     "extra_body": null

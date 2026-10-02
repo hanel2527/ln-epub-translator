@@ -24,6 +24,18 @@ class TestStudyTranslator(unittest.TestCase):
     def respond_with(self, *responses):
         self.llm.context.return_value.__enter__.return_value.request.side_effect = responses
 
+    def test_invalid_output_budgets_are_rejected_before_translation(self):
+        for limit in (0, -1, 1.5, True, "16384"):
+            with self.subTest(limit=limit):
+                with self.assertRaisesRegex(ValueError, "positive integer"):
+                    StudyTranslator(
+                        self.llm,
+                        "English",
+                        MagicMock(),
+                        MagicMock(),
+                        max_output_tokens=limit,
+                    )
+
     def test_notes_stay_with_each_source_paragraph(self):
         results = self.translator._parse_response(
             "<p>First translation.</p>"
@@ -70,6 +82,23 @@ class TestStudyTranslator(unittest.TestCase):
         self.assertEqual(
             results[1].study_notes,
             ["Nested explanation", "Final explanation without a closing tag"],
+        )
+
+    def test_study_closed_as_paragraph_does_not_invalidate_complete_translations(self):
+        results = self.translator._parse_response(
+            "<p>First</p><study>漢字 explanation</p>"
+            "<p>Second</p><study>Another explanation</p>",
+            "<p>一</p><p>二</p>",
+        )
+        self.assertEqual(
+            [(r.translated_html, r.study_notes) for r in results],
+            [("<p>First</p>", ["漢字 explanation"]), ("<p>Second</p>", ["Another explanation"])],
+        )
+        self.assertIsNone(
+            self.translator._parse_response(
+                "<p>First</p><study>漢字 explanation</p><p>Truncated",
+                "<p>一</p><p>二</p>",
+            )
         )
 
     def test_nested_study_does_not_leak_into_translation(self):

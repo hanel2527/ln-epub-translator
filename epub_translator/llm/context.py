@@ -57,7 +57,7 @@ class LLMContext:
         try:
             cache_key: str | None = None
             if self._cache_path is not None:
-                cache_key = self._compute_messages_hash(messages)
+                cache_key = self._compute_messages_hash(messages, max_tokens)
                 permanent_cache_file = self._cache_path / f"{cache_key}.txt"
                 if permanent_cache_file.exists():
                     cached_content = permanent_cache_file.read_text(encoding="utf-8")
@@ -90,12 +90,14 @@ class LLMContext:
             self._temperature.increase()
             self._top_p.increase()
 
-    def _compute_messages_hash(self, messages: list[Message]) -> str:
+    def _compute_messages_hash(self, messages: list[Message], max_tokens: int | None) -> str:
         messages_dict = [{"role": msg.role.value, "message": msg.message} for msg in messages]
         hash_data = {
             "messages": messages_dict,
             "cache_seed": self._cache_seed_content,
         }
+        if max_tokens is not None:
+            hash_data["max_tokens"] = max_tokens
         hash_json = json.dumps(hash_data, ensure_ascii=False, sort_keys=True)
         return hashlib.sha512(hash_json.encode("utf-8")).hexdigest()
 

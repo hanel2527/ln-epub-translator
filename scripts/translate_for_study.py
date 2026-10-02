@@ -11,7 +11,7 @@ from epub_translator.study.runner import run_translation
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Translate EPUB for Japanese study (with furigana + kanji glossary)")
+    parser = argparse.ArgumentParser(description="Translate EPUB for Japanese study (with furigana + inline study notes)")
     parser.add_argument("source_path", type=str, help="Path to the source EPUB file")
     parser.add_argument(
         "-l",

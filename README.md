@@ -93,6 +93,22 @@ uv run scripts/translate_for_study.py path/to/book.epub --dict path/to/dict.md -
 ```
 Output will be in `out` directory.
 
+### Paragraph-local study notes
+Study translation requests tagged text instead of JSON:
+```html
+<p>번역을 배운다.</p> <study>翻訳(ほんやく): 翻(번역할 번) + 訳(번역할 역); '번역'을 뜻하는 한자어</study>
+<p>조금 쉬자.</p>
+```
+Each source paragraph has one translated `<p>` in the same order, followed by zero or more `<study>` notes. Notes are free-form prose; line breaks, tag casing, and missing study closing tags are tolerated. Complete, nonempty translation paragraphs are still required so missing text cannot silently shift paragraph alignment.
+
+- Study EPUB and `_progress.html`: original with furigana, then translation and always-visible notes on the same line when space permits. Long notes wrap naturally.
+- Clean EPUB: translation only; no original or study notes.
+- Notes remain next to every occurrence, with no chapter-end glossary. The preview's book-end glossary and vocabulary count index recognizable `expression(reading): explanation` notes only; other prose is still displayed in full next to its paragraph.
+- Incomplete/mismatched responses use smaller split batches. A failed single paragraph stops translation rather than marking its chapter complete.
+- `--resume` retains already-completed chapters as saved. To apply this format to an older translation, start a fresh run in a different output directory, such as `-o out-text`.
+
+For Gemma with long explanations, start conservatively with `-b 1200 --max-paragraphs 12` and adjust after checking `_progress.html`. This is a suggested starting point, not a model benchmark; output is currently capped at 4096 tokens per request.
+
 ### Expected Output
 ```sh
 out

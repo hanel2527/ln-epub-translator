@@ -1,6 +1,7 @@
-import json
 import re
 from dataclasses import dataclass
+from html import escape
+from html.parser import HTMLParser
 from xml.etree.ElementTree import Element
 
 from ..llm import LLM, Message, MessageRole
@@ -9,15 +10,94 @@ from ..segment import InlineSegment, search_inline_segments, search_text_segment
 from .kanji_tracker import KanjiTracker
 from .ruby_annotator import RubyAnnotator
 
-_JSON_PATTERN = re.compile(r"\{.*\}", re.DOTALL)
-_P_PATTERN = re.compile(r"<p>(.*?)</p>", re.DOTALL)
+_SOURCE_PARAGRAPH_PATTERN = re.compile(r"<p>.*?</p>", re.DOTALL)
 
 
 @dataclass
 class StudyTranslationResult:
     source_html: str
     translated_html: str
-    vocabulary: list[dict[str, str]]
+    study_notes: list[str]
+
+
+class _StudyResponseParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.paragraphs: list[tuple[str, list[str]]] = []
+        self.invalid = False
+        self._paragraph_parts: list[str] | None = None
+        self._paragraph_notes: list[str] | None = None
+        self._study_parts: list[str] | None = None
+        self._study_notes: list[str] | None = None
+        self._ignored_depth = 0
+
+    def _finish_study(self) -> None:
+        if self._study_parts is not None and self._study_notes is not None:
+            note = "".join(self._study_parts).strip()
+            if note:
+                self._study_notes.append(note)
+        self._study_parts = None
+        self._study_notes = None
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in ("thought", "thinking"):
+            self._ignored_depth += 1
+            return
+        if self._ignored_depth:
+            return
+        if tag == "p":
+            self._finish_study()
+            if self._paragraph_parts is not None:
+                self.invalid = True
+            self._paragraph_parts = []
+            self._paragraph_notes = []
+        elif tag == "study":
+            self._finish_study()
+            self._study_parts = []
+            self._study_notes = self._paragraph_notes
+            if self._study_notes is None and self.paragraphs:
+                self._study_notes = self.paragraphs[-1][1]
+        elif tag == "br":
+            self.handle_data("\n")
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in ("thought", "thinking"):
+            if self._ignored_depth:
+                self._ignored_depth -= 1
+            return
+        if self._ignored_depth:
+            return
+        if tag == "study":
+            self._finish_study()
+        elif tag == "p":
+            self._finish_study()
+            if self._paragraph_parts is None or self._paragraph_notes is None:
+                self.invalid = True
+                return
+            translation = "".join(self._paragraph_parts).strip()
+            if not translation:
+                self.invalid = True
+            self.paragraphs.append((translation, self._paragraph_notes))
+            self._paragraph_parts = None
+            self._paragraph_notes = None
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.handle_starttag(tag, attrs)
+        self.handle_endtag(tag)
+
+    def handle_data(self, data: str) -> None:
+        if self._ignored_depth:
+            return
+        if self._study_parts is not None:
+            self._study_parts.append(data)
+        elif self._paragraph_parts is not None:
+            self._paragraph_parts.append(data)
+
+    def finish(self) -> None:
+        self.close()
+        self._finish_study()
+        if self._paragraph_parts is not None:
+            self.invalid = True
 
 
 class StudyTranslator:
@@ -88,7 +168,7 @@ class StudyTranslator:
             if text_segment.parent_stack[-1].tag == "rt":
                 continue
             text = text_segment.text
-            source_parts.append(text)
+            source_parts.append(escape(text))
         return "<p>" + "".join(source_parts) + "</p>"
 
     def _translate_batch_with_fallback(self, batch: list[InlineSegment]) -> list[StudyTranslationResult]:
@@ -98,24 +178,23 @@ class StudyTranslator:
             result = None
 
         if result is not None:
-            return [result]
+            return result
 
         if len(batch) <= 1:
-            return []
+            raise ValueError("Study translation failed: expected one complete, nonempty <p> translation.")
 
         mid = len(batch) // 2
         first = self._translate_batch_with_fallback(batch[:mid])
         second = self._translate_batch_with_fallback(batch[mid:])
         return first + second
 
-    def _translate_batch(self, batch: list[InlineSegment]) -> StudyTranslationResult | None:
+    def _translate_batch(self, batch: list[InlineSegment]) -> list[StudyTranslationResult] | None:
         combined_source = "\n\n".join(self._build_inline_source(s) for s in batch)
 
         user_message_text = f"Translate the following Japanese text:\n\n{combined_source}"
 
         prompt = self._llm.template("translate_study").render(
             target_language=self._target_language,
-            source_text=combined_source,
             dictionary=self._dictionary_prompt,
         )
 
@@ -131,24 +210,23 @@ class StudyTranslator:
 
         return self._parse_response(response, combined_source)
 
-    def _parse_response(self, response: str, source_html: str) -> StudyTranslationResult | None:
-        json_match = _JSON_PATTERN.search(response)
-        if not json_match:
+    def _parse_response(self, response: str, source_html: str) -> list[StudyTranslationResult] | None:
+        parser = _StudyResponseParser()
+        parser.feed(response)
+        parser.finish()
+        # Source blocks are produced by _build_inline_source, with all inner text escaped.
+        source_paragraphs = _SOURCE_PARAGRAPH_PATTERN.findall(source_html)
+        if parser.invalid or not source_paragraphs or len(parser.paragraphs) != len(source_paragraphs):
             return None
 
-        try:
-            data = json.loads(json_match.group())
-        except json.JSONDecodeError:
-            return None
-
-        translated_html = data.get("translation", "")
-        vocabulary = data.get("vocabulary", [])
-
-        return StudyTranslationResult(
-            source_html=source_html,
-            translated_html=translated_html,
-            vocabulary=vocabulary,
-        )
+        return [
+            StudyTranslationResult(
+                source_html=source,
+                translated_html=f"<p>{escape(translation)}</p>",
+                study_notes=notes,
+            )
+            for source, (translation, notes) in zip(source_paragraphs, parser.paragraphs, strict=True)
+        ]
 
     def strip_ruby_from_source(self, text: str) -> str:
         return self._ruby_annotator.strip_ruby(text)

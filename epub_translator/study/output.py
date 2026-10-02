@@ -1,36 +1,15 @@
 import html
+import posixpath
 import re
 
 from ..epub.zip import Zip
-from .kanji_tracker import KanjiEntry, KanjiTracker, VocabEntry
+from .kanji_tracker import KanjiTracker
 from .ruby_annotator import RubyAnnotator
 from pathlib import Path
 
 
 _AMP_PATTERN = re.compile(r"&(?!(?:amp|lt|gt|quot|apos|#[0-9]+|#x[0-9a-fA-F]+);)")
 
-def _make_glossary_section(
-    title: str,
-    kanji_entries: list[KanjiEntry],
-    vocab_entries: list[VocabEntry],
-) -> list[str]:
-    lines: list[str] = []
-    if not kanji_entries and not vocab_entries:
-        return lines
-    lines.append('<details class="glossary">')
-    lines.append(f"<summary>{title}</summary>")
-    lines.append("<ul>")
-    for entry in kanji_entries:
-        meaning_part = f" — {entry.meaning}" if entry.meaning else ""
-        lines.append(f"<li><ruby><rb>{entry.kanji}</rb><rt>{entry.reading}</rt></ruby>{meaning_part}</li>")
-    for entry in vocab_entries:
-        parts = [f"<ruby><rb>{entry.expression}</rb><rt>{entry.reading}</rt></ruby> — {entry.meaning}"]
-        if entry.notes:
-            parts.append(f'<div class="vocab-notes">{entry.notes}</div>')
-        lines.append(f"<li>{''.join(parts)}</li>")
-    lines.append("</ul>")
-    lines.append("</details>")
-    return lines
 
 
 class StudyOutputGenerator:
@@ -48,14 +27,14 @@ class StudyOutputGenerator:
         self,
         chapter_index: int,
         chapter_title: str,
-        paragraphs: list[tuple[str, str]],
+        paragraphs: list[tuple[str, str, list[str]]],
     ) -> str:
         lines: list[str] = []
         if chapter_title:
             lines.append(f"<h1>{chapter_title}</h1>")
         lines.append('<div class="chapter-body">')
 
-        for source_html, translated_html in paragraphs:
+        for source_html, translated_html, study_notes in paragraphs:
             lines.append('<div class="para-block">')
 
             lines.append('<div class="source-text">')
@@ -64,23 +43,17 @@ class StudyOutputGenerator:
 
             lines.append('<div class="translation-text">')
             lines.append(translated_html)
+            if study_notes:
+                notes_html = "; ".join(
+                    f'<span class="study-note">{html.escape(note)}</span>'
+                    for note in study_notes
+                )
+                lines.append(f'<span class="study-notes">{notes_html}</span>')
             lines.append("</div>")
 
             lines.append("</div>")
 
         lines.append("</div>")
-
-        chapter_kanji = self._kanji_tracker.get_chapter_kanji(chapter_index)
-        chapter_vocab = self._kanji_tracker.get_chapter_vocab(chapter_index)
-        if chapter_kanji or chapter_vocab:
-            lines.append("<hr/>")
-            lines.extend(
-                _make_glossary_section(
-                    "章のまとめ",
-                    chapter_kanji,
-                    chapter_vocab,
-                )
-            )
 
         return "\n".join(lines)
 
@@ -119,30 +92,27 @@ body {
     padding: 0.5em 1em;
     margin: 0.5em 0;
 }
+.translation-text p {
+    display: inline;
+    margin: 0;
+}
+.study-notes {
+    margin-left: 0.5em;
+    font-size: 0.85em;
+    color: #555;
+    overflow-wrap: anywhere;
+}
+.study-note {
+    display: inline;
+}
 .para-block {
     margin: 1.5em 0;
     border-bottom: 1px solid #eee;
     padding-bottom: 1em;
 }
-.glossary {
-    margin: 0.5em 0 0.5em 1em;
-    font-size: 0.9em;
-    color: #555;
-}
-.glossary summary {
-    cursor: pointer;
-    color: #2a7;
-    font-weight: bold;
-}
 ruby rt {
     font-size: 0.6em;
     color: #666;
-}
-.vocab-notes {
-    font-size: 0.85em;
-    color: #555;
-    margin-top: 0.3em;
-    line-height: 1.5;
 }
 h1 {
     border-bottom: 2px solid #333;
@@ -178,18 +148,18 @@ hr {
             lines.append("<tr><th>表記</th><th>読み</th><th>意味</th><th>비고</th><th>初出</th></tr>")
             for entry in all_vocab:
                 lines.append(
-                    f"<tr><td><ruby><rb>{entry.expression}</rb><rt>{entry.reading}</rt></ruby></td>"
-                    f"<td>{entry.reading}</td>"
-                    f"<td>{entry.meaning}</td>"
-                    f"<td>{entry.notes}</td>"
-                    f"<td>{entry.first_appearance}</td></tr>"
+                    f"<tr><td><ruby><rb>{html.escape(entry.expression)}</rb><rt>{html.escape(entry.reading)}</rt></ruby></td>"
+                    f"<td>{html.escape(entry.reading)}</td>"
+                    f"<td>{html.escape(entry.meaning)}</td>"
+                    f"<td>{html.escape(entry.notes)}</td>"
+                    f"<td>{html.escape(entry.first_appearance)}</td></tr>"
                 )
             for entry in all_kanji:
                 lines.append(
-                    f"<tr><td><ruby><rb>{entry.kanji}</rb><rt>{entry.reading}</rt></ruby></td>"
-                    f"<td>{entry.reading}</td>"
-                    f"<td>{entry.meaning}</td>"
-                    f"<td>{entry.first_appearance}</td></tr>"
+                    f"<tr><td><ruby><rb>{html.escape(entry.kanji)}</rb><rt>{html.escape(entry.reading)}</rt></ruby></td>"
+                    f"<td>{html.escape(entry.reading)}</td>"
+                    f"<td>{html.escape(entry.meaning)}</td>"
+                    f"<td>{html.escape(entry.first_appearance)}</td></tr>"
                 )
             lines.append("</table>")
 
@@ -226,6 +196,19 @@ body {
     padding: 0.5em 1em;
     margin: 0.5em 0;
 }
+.translation-text p {
+    display: inline;
+    margin: 0;
+}
+.study-notes {
+    margin-left: 0.5em;
+    font-size: 0.85em;
+    color: #555;
+    overflow-wrap: anywhere;
+}
+.study-note {
+    display: inline;
+}
 .para-block {
     margin: 1.5em 0;
     border-bottom: 1px solid #eee;
@@ -234,12 +217,6 @@ body {
 ruby rt {
     font-size: 0.6em;
     color: #666;
-}
-.vocab-notes {
-    font-size: 0.85em;
-    color: #555;
-    margin-top: 0.3em;
-    line-height: 1.5;
 }
 h1 {
     border-bottom: 2px solid #333;
@@ -258,6 +235,7 @@ hr {
                 continue
             ch_title, html_parts = item
             ch_path = Path(chapter_paths[ch_idx])
+            stylesheet_href = posixpath.relpath("OEBPS/style.css", ch_path.parent.as_posix())
             escaped_title = html.escape(ch_title, quote=True) if ch_title else book_title or f"Chapter {ch_idx + 1}"
             body = _AMP_PATTERN.sub("&amp;", "\n".join(html_parts))
             ch_content = f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -266,7 +244,7 @@ hr {
 <head>
 <meta charset="utf-8"/>
 <title>{escaped_title}</title>
-<link rel="stylesheet" type="text/css" href="style.css"/>
+<link rel="stylesheet" type="text/css" href="{stylesheet_href}"/>
 </head>
 <body>
 {body}
@@ -308,6 +286,7 @@ h1 {
                 continue
             ch_title, trans_html = item
             ch_path = Path(chapter_paths[ch_idx])
+            stylesheet_href = posixpath.relpath("OEBPS/style.css", ch_path.parent.as_posix())
             escaped_title = html.escape(ch_title, quote=True) if ch_title else ""
             heading = f"<h1>{escaped_title}</h1>" if ch_title else ""
             trans_body = _AMP_PATTERN.sub("&amp;", trans_html)
@@ -317,7 +296,7 @@ h1 {
 <head>
 <meta charset="utf-8"/>
 <title>{escaped_title}</title>
-<link rel="stylesheet" type="text/css" href="style.css"/>
+<link rel="stylesheet" type="text/css" href="{stylesheet_href}"/>
 </head>
 <body>
 {heading}

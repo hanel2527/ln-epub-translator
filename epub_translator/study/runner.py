@@ -58,6 +58,10 @@ _AUTO_TITLE_PATTERN = re.compile(
     r"^(?:chapter|chaper|ch|section|sec|part|pt)\s*[0-9]+$",
     re.IGNORECASE,
 )
+_STUDY_VOCAB_PATTERN = re.compile(
+    r"^\s*(?:[-*]\s+)?([^\s()（）:：]+)\s*[(（]([^()（）]+)[)）]\s*[:：]\s*(.+)",
+    re.DOTALL,
+)
 
 
 def _is_generated_title(title: str) -> bool:
@@ -209,26 +213,24 @@ def run_translation(
             else:
                 display_title = chapter_title
 
-            paragraphs: list[tuple[str, str]] = []
+            paragraphs: list[tuple[str, str, list[str]]] = []
 
             for result in results:
-                for v in result.vocabulary:
-                    expr = v.get("expression", "")
-                    reading = v.get("reading", "")
-                    meaning = v.get("meaning", "")
-                    notes = v.get("notes", "")
-                    if expr:
-                        kanji_tracker.extract_new_vocab_from_llm(
-                            llm_annotations=[(expr, reading, meaning, notes)],
+                # Index recognizable notes for the optional master glossary only.
+                # Every note is displayed locally, regardless of its syntax or prior appearances.
+                for note in result.study_notes:
+                    match = _STUDY_VOCAB_PATTERN.match(note)
+                    if match:
+                        expression, reading, description = match.groups()
+                        kanji_tracker.register_new_vocab(
+                            expression=expression,
+                            reading=reading.strip(),
+                            meaning=description.strip(),
                             chapter_title=chapter_title,
                         )
 
-                src_paras = re.findall(r"<p>(.*?)</p>", result.source_html, re.DOTALL)
-                trans_paras = re.findall(r"<p>(.*?)</p>", result.translated_html, re.DOTALL)
-                for src_p, trans_p in zip(src_paras, trans_paras):
-                    src_p_html = ruby_annotator.add_ruby_to_html(f"<p>{src_p}</p>")
-                    trans_p_html = ruby_annotator.add_ruby_to_html(f"<p>{trans_p}</p>")
-                    paragraphs.append((src_p_html, trans_p_html))
+                source_html = ruby_annotator.add_ruby_to_html(result.source_html)
+                paragraphs.append((source_html, result.translated_html, result.study_notes))
 
             chapter_html = output_gen.generate_chapter_html(
                 chapter_index=chapter_index,

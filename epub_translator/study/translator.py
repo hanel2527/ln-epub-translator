@@ -156,6 +156,8 @@ class StudyTranslator:
 
         for segment in inline_segments:
             seg_text = self._build_inline_source(segment)
+            if not seg_text:
+                continue
             seg_len = len(seg_text)
             if current_batch and (
                 current_batch_len + seg_len > self._batch_size
@@ -175,11 +177,12 @@ class StudyTranslator:
     def _build_inline_source(self, inline_segment: InlineSegment) -> str:
         source_parts: list[str] = []
         for text_segment in inline_segment:
-            if text_segment.parent_stack[-1].tag == "rt":
+            if any(parent.tag.lower() in ("rt", "rp", "rtc") for parent in text_segment.parent_stack):
                 continue
             text = text_segment.text
             source_parts.append(escape(text))
-        return "<p>" + "".join(source_parts) + "</p>"
+        source_text = "".join(source_parts)
+        return f"<p>{source_text}</p>" if source_text.strip() else ""
 
     def _translate_batch_with_fallback(self, batch: list[InlineSegment]) -> list[StudyTranslationResult]:
         try:

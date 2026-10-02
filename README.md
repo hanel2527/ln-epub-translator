@@ -112,6 +112,7 @@ Study translation requests tagged text instead of JSON:
 <p>조금 쉬자.</p>
 ```
 Each source paragraph has one translated `<p>` in the same order, followed by zero or more `<study>` notes. Notes are free-form prose; line breaks, tag casing, and missing study closing tags are tolerated. Complete, nonempty translation paragraphs are still required so missing text cannot silently shift paragraph alignment.
+Ruby bases (`<rb>`) stay in their enclosing source paragraph. Readings and fallback text inside `<rt>`, `<rp>`, or `<rtc>` are excluded from translation requests, including nested markup. Blocks without visible source text are not sent to the model.
 
 - Study EPUB and `_progress.html`: original with furigana, then translation and always-visible notes on the same line when space permits. Long notes wrap naturally.
 - Clean EPUB: translation only; no original or study notes.

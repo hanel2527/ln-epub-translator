@@ -61,6 +61,18 @@ class TestCollectInlineSegment(unittest.TestCase):
         # 应该有 5 个 children：X, em, Y, em, Z
         self.assertEqual(len(inline_segment.children), 5)
 
+    def test_ruby_base_and_reading_containers_preserve_paragraph_boundaries(self):
+        root = fromstring(
+            "<body><p>A<ruby><rb>漢字</rb><rtc><rt>かんじ</rt></rtc></ruby>B</p><p>C</p></body>"
+        )
+        segments = list(search_inline_segments(search_text_segments(root)))
+        self.assertEqual(len(segments), 2)
+        self.assertEqual([segment.parent.tag for segment in segments], ["p", "p"])
+        self.assertEqual(
+            ["".join(text_segment.text for text_segment in segment) for segment in segments],
+            ["A漢字かんじB", "C"],
+        )
+
 
 class TestInlineSegmentIDAssignment(unittest.TestCase):
     """测试 InlineSegment ID 分配逻辑"""

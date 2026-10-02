@@ -167,6 +167,49 @@ class TestStudyTranslator(unittest.TestCase):
         self.assertEqual(results[0].source_html, "<p>A &amp; B &lt; C &quot;quote&quot; 漢字</p>")
         self.assertEqual(fromstring(results[0].source_html).text, 'A & B < C "quote" 漢字')
 
+    def test_ruby_base_fragments_stay_in_their_source_paragraph(self):
+        self.respond_with("<p>The rainy season ended.</p><p>The book arrived.</p>")
+        results = self.translator.translate_chapter(
+            fromstring(
+                "<body><p>早い<ruby><rb>梅</rb><rt>つ</rt></ruby>"
+                "<ruby><rb>雨</rb><rt>ゆ</rt></ruby>明け。</p>"
+                "<p><ruby><rb>本</rb><rp>（</rp><rt><span>ほん</span></rt><rp>）</rp></ruby>"
+                "が<ruby><rb>到来</rb><rtc><rt>とうらい</rt></rtc></ruby>した。</p></body>"
+            )
+        )
+        self.assertEqual(
+            [(r.source_html, r.translated_html) for r in results],
+            [
+                ("<p>早い梅雨明け。</p>", "<p>The rainy season ended.</p>"),
+                ("<p>本が到来した。</p>", "<p>The book arrived.</p>"),
+            ],
+        )
+
+    def test_reading_only_blocks_do_not_displace_visible_paragraphs(self):
+        self.respond_with("<p>It rained.</p><p>It cleared.</p>")
+        results = self.translator.translate_chapter(
+            fromstring(
+                "<body><p><ruby><rt><span>あめ</span></rt></ruby></p>"
+                "<p>雨が降った。</p><p>　<br/>　</p>"
+                "<p><ruby><rt>はれ</rt><rp>（</rp><rp>）</rp></ruby></p>"
+                "<p>晴れた。</p></body>"
+            )
+        )
+        self.assertEqual(
+            [(r.source_html, r.translated_html) for r in results],
+            [("<p>雨が降った。</p>", "<p>It rained.</p>"), ("<p>晴れた。</p>", "<p>It cleared.</p>")],
+        )
+
+    def test_chapter_without_visible_text_does_not_request_translation(self):
+        results = self.translator.translate_chapter(
+            fromstring(
+                "<body><p>　<br/>　</p><p><ruby><rt><span>よみ</span></rt>"
+                "<rp>（</rp><rp>）</rp></ruby></p><p><img src='cover.jpg'/></p></body>"
+            )
+        )
+        self.assertEqual(results, [])
+        self.llm.context.assert_not_called()
+
     def test_split_fallback_preserves_paragraph_and_note_order(self):
         self.respond_with(
             "<p>Truncated batch",

@@ -85,6 +85,17 @@ uv run scripts/translate_for_study.py path/to/book.epub --dict notes.txt -l Kore
 
 You can check example in [here](./example.dict.md)
 
+#### Name scope and translation fidelity
+The prompt treats a full-name dictionary entry as identity/spelling guidance, not a command to expand every mention. For example, with `温水和彦 = 누쿠미즈 카즈히코`, source `温水` stays `누쿠미즈`, `和彦` stays `카즈히코`, and only `温水和彦` becomes the full name. A name plus an honorific must not be replaced with a nickname merely because they refer to the same person.
+
+The prompt also asks the model to:
+- Preserve pronouns, omitted subjects, titles, dialogue versus inner thoughts, negation, uncertainty, conditions, numbers, and who did what to whom.
+- Use notes only for the current paragraph; cover useful compounds even when they repeat.
+- Prefer supported readings and contextual meanings over invented character labels or speculative etymologies. Omit an uncertain breakdown rather than invent one.
+
+These are model instructions, not deterministic name rewriting or dictionary verification. A live `gemma4:31b` check passed 18 Korean and 4 English name-scope cases; a repeated vocabulary explanation was still omitted in a separate 12-paragraph sample. Review the output, especially study notes. New requests use the updated prompt; `--resume` does not rewrite completed chapters.
+
+
 ### Run translator
 ```sh
 uv run scripts/translate_for_study.py path/to/book.epub --dict path/to/dict.md -l Korean

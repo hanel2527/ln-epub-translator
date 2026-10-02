@@ -80,7 +80,6 @@ def main():
             "epub_translator.segment", "epub_translator.serial",
             "epub_translator.xml_translator", "epub_translator.study",
             "epub_translator.study.kanji_tracker",
-            "epub_translator.study.name_dict",
             "epub_translator.study.ruby_annotator",
             "epub_translator.study.translator",
             "epub_translator.study.output",

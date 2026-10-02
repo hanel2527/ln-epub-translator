@@ -58,23 +58,24 @@ epub파일 업로드한 다음 `Start Translation` 버튼을 눌러서 번역 �
 }
 ```
 
-### 사전 설정 (선택 사항)
+### 번역자 노트 / Dictionary (선택 사항)
 
-LLM에 추가 지시사항을 제공할 수 있음.
+이름 표기, 말투, 번역 지침 등을 자유롭게 적은 UTF-8 텍스트 파일을 `--dict`로 지정.
+파일 전체를 파싱이나 재포맷 없이 LLM에 전달하므로 제목, 글머리 기호, `이름: 번역` 같은 형식을 맞출 필요 없음.
+기존 Markdown 사전 파일도 그대로 사용 가능.
 
-```md
-## Characters
-- 放虎原ひばり: 호코바루 히바리
-- 馬剃天愛星: 바소리 티아라
-- 志喜屋夢子: 시키야 유메코
+예를 들어 `notes.txt`에 다음처럼 작성:
+```text
+放虎原ひばり는 호코바루 히바리로 번역해줘.
+馬剃天愛星는 바소리 티아라로 써줘.
 
-## Notes
-- 1인칭 서술은 반말로 번역할 것
+1인칭 서술은 반말로 해줘.
+대사는 자연스럽게 옮겨줘.
 ```
 
-`path/to/dict.md` 파일을 생성해서 저장.
-
-`- name1: name2` 형식의 항목은 콜론(`:`)을 기준으로 키-값 쌍으로 처리되고 콜론이 없는 항목은 메모(Notes)로 해석됨.
+```sh
+uv run scripts/translate_for_study.py path/to/book.epub --dict notes.txt -l Korean
+```
 
 예시는 [example.dict.md](../example.dict.md)
 

@@ -49,7 +49,7 @@ def main() -> None:
         "--dict",
         type=str,
         default=None,
-        help="Path to markdown dictionary file for proper nouns and style notes",
+        help="Path to UTF-8 translator notes (free-form text; no required format)",
     )
     args = parser.parse_args()
 

@@ -67,19 +67,20 @@ Recommended values are:
   }
 }
 ```
-### Dictionary (Optional)
-You can give instructions to LLM.
-```md
-## Characters
-- 放虎原ひばり: 호코바루 히바리
-- 馬剃天愛星: 바소리 티아라
-- 志喜屋夢子: 시키야 유메코
-## Notes
-- Use informal speech for first-person narrative
+### Translator notes / Dictionary (Optional)
+Pass a UTF-8 text file with `--dict`. Its full contents are sent to the LLM as translator notes, without parsing or reformatting. No required headings, bullets, or `name: translation` syntax; existing Markdown dictionaries also work.
+
+For example, save this as `notes.txt`:
+```text
+Translate 放虎原ひばり as 호코바루 히바리.
+馬剃天愛星 should be 바소리 티아라.
+
+Use informal speech for first-person narrative.
+Keep dialogue natural.
 ```
-Create a file to `path/to/dict.md`.
-```- name1: name2``` will be parsed into key-value pair, separated by colons.
-If there is no colon, it will be interpreted as notes.
+```sh
+uv run scripts/translate_for_study.py path/to/book.epub --dict notes.txt -l Korean
+```
 
 You can check example in [here](./example.dict.md)
 

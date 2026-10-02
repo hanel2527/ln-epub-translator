@@ -12,8 +12,6 @@ from epub_translator.study import (
     KanjiTracker,
     RubyAnnotator,
     StudyTranslator,
-    format_dict_for_prompt,
-    parse_name_dict,
 )
 from epub_translator.study.output import StudyOutputGenerator
 from epub_translator.utils import read_format_json
@@ -116,8 +114,8 @@ def run_translation(
         llm = _load_llm_from_config(log_dir_path=book_dir / "logs", cache_path=cache_dir)
 
     dictionary_prompt = ""
-    if dict_path:
-        dictionary_prompt = format_dict_for_prompt(parse_name_dict(dict_path))
+    if dict_path and dict_path.exists():
+        dictionary_prompt = dict_path.read_text(encoding="utf-8")
 
     ruby_annotator = RubyAnnotator()
     kanji_tracker = KanjiTracker()

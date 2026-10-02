@@ -4,11 +4,11 @@
   "model": "sample-llm-model",
   "token_encoding": "o200k_base",
   "timeout": 360.0,
-  "retry_times": 10,
-  "retry_interval_seconds": 0.75,
+  "retry_times": 3,
+  "retry_interval_seconds": 10,
   "translation": {
-    "temperature": 0.8,
-    "top_p": 0.6
+    "temperature": 0.1,
+    "top_p": 0.9
   },
   "fill": {
     "temperature": [0.2, 0.9],
@@ -16,7 +16,7 @@
   },
   "study": {
     "max_output_tokens": 16384,
-    "temperature": 0.3,
+    "temperature": 0.2,
     "top_p": 0.9,
     "extra_body": null
   },
